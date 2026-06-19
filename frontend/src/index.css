@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-brand-offwhite text-brand-charcoal font-sans antialiased;
+  }
+}
+
+/* Custom Leaflet overrides to match brand colors */
+.leaflet-container {
+  font-family: inherit;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(26, 26, 26, 0.1);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+.leaflet-bar a {
+  background-color: #FAFAF8 !important;
+  color: #1A1A1A !important;
+  border-bottom: 1px solid rgba(26, 26, 26, 0.1) !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #E8A020 !important;
+  color: #FAFAF8 !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAFAF8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E8A020;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d08f1b;
+}
+
+/* Masonry portfolio gallery styles */
+.masonry-grid {
+  display: flex;
+  margin-left: -1rem; /* gutter size offset */
+  width: auto;
+}
+.masonry-grid_column {
+  padding-left: 1rem; /* gutter size */
+  background-clip: padding-box;
+}
+
+/* Smooth page transition animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Skeleton loader pulsing keyframe */
+@keyframes skeletonPulse {
+  0%, 100% { background-color: rgba(26, 26, 26, 0.04); }
+  50% { background-color: rgba(26, 26, 26, 0.09); }
+}
+
+.animate-skeleton {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
