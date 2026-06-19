@@ -1,42 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
 import { PhotographerCardSkeleton } from '../components/Skeleton';
-import { Search as SearchIcon, Filter, MapPin, Star, Calendar, ArrowUpDown, Compass, Map, List } from 'lucide-react';
+import { Search as SearchIcon, Filter, MapPin, Star, Calendar, ArrowUpDown, Compass, List } from 'lucide-react';
 import { formatINR, getProfileImage } from '../utils/currency';
 
-// Custom Gold/Amber Marker Icon to match the design palette
-const amberIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
 
-// Center mapping for predefined cities
-const CITY_COORDS = {
-  'pune': [18.5204, 73.8567],
-  'hadapsar': [18.5089, 73.9260],
-  'phursungi': [18.4680, 73.9450],
-  'bhekrai nagar': [18.4720, 73.9420],
-  'uruli devachi': [18.4550, 73.9350],
-  'shewalewadi': [18.4875, 73.9580],
-};
-
-// Map controller to change view dynamically
-function ChangeMapView({ center, zoom }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.setView(center, zoom);
-    }
-  }, [center, zoom, map]);
-  return null;
-}
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,7 +19,6 @@ export default function Search() {
   // UI state
   const [photographers, setPhotographers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [mobileView, setMobileView] = useState('list'); // 'list' or 'map'
 
   // Additional filter states
   const [minPrice, setMinPrice] = useState('');
@@ -59,9 +27,7 @@ export default function Search() {
   const [availDate, setAvailDate] = useState('');
   const [sortBy, setSortBy] = useState('nearest');
 
-  // Map settings
-  const [mapCenter, setMapCenter] = useState([18.472, 73.942]); // Bhekrai Nagar, Pune
-  const [mapZoom, setMapZoom] = useState(13);
+
 
   // Fetch photographers on search configuration changes
   useEffect(() => {
@@ -83,18 +49,7 @@ export default function Search() {
         const data = await api.getPhotographers(filters);
         setPhotographers(data);
 
-        // Center map to searched parameters
-        if (lat && lng) {
-          setMapCenter([parseFloat(lat), parseFloat(lng)]);
-          setMapZoom(11);
-        } else if (city && CITY_COORDS[city.toLowerCase()]) {
-          setMapCenter(CITY_COORDS[city.toLowerCase()]);
-          setMapZoom(11);
-        } else if (data.length > 0 && data[0].lat && data[0].lng) {
-          // Center on first photographer result if available
-          setMapCenter([data[0].lat, data[0].lng]);
-          setMapZoom(10);
-        }
+
       } catch (err) {
         console.error('Failed to search photographers', err);
       } finally {
@@ -275,33 +230,11 @@ export default function Search() {
         </div>
       </section>
 
-      {/* Main Split Grid (List & Map) */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden relative">
+      {/* Main Grid */}
+      <div className="flex-1 overflow-hidden relative">
         
-        {/* Toggle button on Mobile */}
-        <div className="lg:hidden absolute bottom-6 right-6 z-40 shadow-lg">
-          <button
-            onClick={() => setMobileView(mobileView === 'list' ? 'map' : 'list')}
-            className="flex items-center space-x-2 bg-brand-charcoal hover:bg-[#E8A020] text-white px-5 py-3.5 rounded-full font-bold transition-colors"
-          >
-            {mobileView === 'list' ? (
-              <>
-                <Map className="w-5 h-5" />
-                <span>Show Map</span>
-              </>
-            ) : (
-              <>
-                <List className="w-5 h-5" />
-                <span>Show List</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Left Side: Photographer Listings */}
-        <div className={`lg:col-span-7 overflow-y-auto pr-2 space-y-4 ${
-          mobileView === 'list' ? 'block h-full' : 'hidden lg:block h-full'
-        }`}>
+        {/* Photographer Listings */}
+        <div className="overflow-y-auto pr-2 space-y-4 h-full">
           <div className="flex justify-between items-center px-1">
             <p className="text-sm font-semibold text-brand-charcoal/60">
               Found {photographers.length} photographer{photographers.length === 1 ? '' : 's'}
@@ -309,8 +242,8 @@ export default function Search() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Array(4).fill(0).map((_, i) => <PhotographerCardSkeleton key={i} />)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array(8).fill(0).map((_, i) => <PhotographerCardSkeleton key={i} />)}
             </div>
           ) : photographers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-3 bg-white rounded-2xl border border-[#1A1A1A]/5">
@@ -319,7 +252,7 @@ export default function Search() {
               <p className="text-sm text-brand-charcoal/50 max-w-sm">Try widening your filters, searching a different city, or removing specializations.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
               {photographers.map((photo) => (
                 <div
                   key={photo.user_id}
@@ -393,55 +326,7 @@ export default function Search() {
           )}
         </div>
 
-        {/* Right Side: Leaflet Map */}
-        <div className={`lg:col-span-5 h-full relative rounded-2xl overflow-hidden border border-[#1A1A1A]/10 shadow-sm ${
-          mobileView === 'map' ? 'block h-full w-full' : 'hidden lg:block h-full'
-        }`}>
-          <MapContainer
-            center={mapCenter}
-            zoom={mapZoom}
-            scrollWheelZoom={true}
-            className="w-full h-full min-h-[400px] lg:min-h-0 z-10"
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <ChangeMapView center={mapCenter} zoom={mapZoom} />
-            
-            {photographers.map((photo) => {
-              if (!photo.lat || !photo.lng) return null;
-              return (
-                <Marker
-                  key={photo.user_id}
-                  position={[photo.lat, photo.lng]}
-                  icon={amberIcon}
-                >
-                  <Popup>
-                    <div className="p-1 space-y-2">
-                      <div className="font-bold text-sm text-brand-charcoal">{photo.name}</div>
-                      <div className="text-xs text-brand-charcoal/60 flex items-center space-x-1">
-                        <Star className="w-3 h-3 text-[#E8A020] fill-current" />
-                        <span>{photo.rating.toFixed(1)}</span>
-                        <span>•</span>
-                        <span>{formatINR(photo.price_per_hour)}/hr</span>
-                      </div>
-                      <div className="text-xs font-semibold text-brand-charcoal/70 line-clamp-1">{photo.specialties}</div>
-                      <Link
-                        to={`/photographer/${photo.user_id}`}
-                        className="block text-center bg-[#E8A020] text-white hover:bg-[#d08f1b] font-bold text-xs py-1.5 px-2 rounded mt-1.5 transition-colors"
-                      >
-                        View Profile
-                      </Link>
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })}
-          </MapContainer>
         </div>
-
-      </div>
     </div>
   );
 }
