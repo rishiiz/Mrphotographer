@@ -13,7 +13,7 @@ export default function Profile() {
   const [packages, setPackages] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [availability, setAvailability] = useState([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('portfolio'); // 'portfolio', 'about', 'reviews'
   const [activePackage, setActivePackage] = useState('standard'); // 'basic', 'standard', 'premium'
@@ -73,10 +73,10 @@ export default function Profile() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in space-y-10">
-      
+
       {/* Profile Header Header */}
       <section className="bg-white rounded-3xl p-6 md:p-8 border border-[#1A1A1A]/5 shadow-sm flex flex-col md:flex-row gap-8 items-start relative overflow-hidden">
-        
+
         {/* Cover overlay decoration */}
         <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-[#E8A020] via-brand-charcoal to-brand-amber"></div>
 
@@ -119,7 +119,7 @@ export default function Profile() {
                 </a>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-1.5 text-[#E8A020] font-bold text-lg bg-[#E8A020]/10 px-3 py-1.5 rounded-xl border border-[#E8A020]/10">
                 <Star className="w-4 h-4 fill-current" />
@@ -161,21 +161,20 @@ export default function Profile() {
 
       {/* Detail Split Column */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Left Side: Portfolio & Bio */}
         <div className="lg:col-span-8 space-y-8">
-          
+
           {/* Tab selectors */}
           <div className="flex border-b border-[#1A1A1A]/10">
             {['portfolio', 'about', 'reviews'].map((t) => (
               <button
                 key={t}
                 onClick={() => setActiveTab(t)}
-                className={`py-4 px-6 text-sm font-bold border-b-2 uppercase tracking-wider transition-colors ${
-                  activeTab === t
+                className={`py-4 px-6 text-sm font-bold border-b-2 uppercase tracking-wider transition-colors ${activeTab === t
                     ? 'border-[#E8A020] text-[#E8A020]'
                     : 'border-transparent text-brand-charcoal/50 hover:text-brand-charcoal'
-                }`}
+                  }`}
               >
                 {t}
               </button>
@@ -212,7 +211,7 @@ export default function Profile() {
                 <h3 className="text-lg font-bold text-brand-charcoal">About {photographer.name}</h3>
                 <p className="text-sm text-brand-charcoal/70 leading-relaxed whitespace-pre-line">{photographer.bio}</p>
               </div>
-              
+
               <div className="border-t border-[#1A1A1A]/10 pt-4 space-y-2">
                 <h3 className="text-lg font-bold text-brand-charcoal">Camera Gear & Equipment</h3>
                 <div className="flex flex-wrap gap-2">
@@ -259,7 +258,7 @@ export default function Profile() {
 
         {/* Right Side: Packages & Calendar Picker */}
         <div className="lg:col-span-4 space-y-6">
-          
+
           {/* Packages Tier Picker */}
           <div className="bg-white p-6 rounded-3xl border border-[#1A1A1A]/5 shadow-sm space-y-6">
             <h3 className="text-lg font-bold text-brand-charcoal flex items-center space-x-1.5">
@@ -273,11 +272,10 @@ export default function Profile() {
                 <button
                   key={tier}
                   onClick={() => setActivePackage(tier)}
-                  className={`py-2 rounded-lg text-xs font-bold capitalize transition-all ${
-                    activePackage === tier
+                  className={`py-2 rounded-lg text-xs font-bold capitalize transition-all ${activePackage === tier
                       ? 'bg-brand-charcoal text-white shadow-sm'
                       : 'text-brand-charcoal/50 hover:text-brand-charcoal'
-                  }`}
+                    }`}
                 >
                   {tier}
                 </button>
@@ -349,11 +347,10 @@ export default function Profile() {
                         key={slot}
                         type="button"
                         onClick={() => setChosenSlot(slot)}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold border transition-all text-center ${
-                          chosenSlot === slot
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold border transition-all text-center ${chosenSlot === slot
                             ? 'bg-[#E8A020] border-[#E8A020] text-white'
                             : 'bg-brand-offwhite border-[#1A1A1A]/10 text-brand-charcoal/70 hover:bg-brand-charcoal/5'
-                        }`}
+                          }`}
                       >
                         {slot}
                       </button>
