@@ -27,8 +27,9 @@ export default function PhotographerDashboard() {
   const [gear, setGear] = useState('');
   const [specialties, setSpecialties] = useState('');
   const [portfolioList, setPortfolioList] = useState([]);
-  const [newPortfolioUrl, setNewPortfolioUrl] = useState('');
   const [profileMsg, setProfileMsg] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -136,10 +137,25 @@ export default function PhotographerDashboard() {
     }
   };
 
-  const handleAddPortfolioImage = () => {
-    if (newPortfolioUrl && !portfolioList.includes(newPortfolioUrl)) {
-      setPortfolioList([...portfolioList, newPortfolioUrl]);
-      setNewPortfolioUrl('');
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadError('');
+
+    try {
+      const response = await api.uploadPhoto(file);
+      const url = response.url;
+      if (url && !portfolioList.includes(url)) {
+        setPortfolioList([...portfolioList, url]);
+      }
+      e.target.value = null;
+    } catch (err) {
+      console.error(err);
+      setUploadError(err.message || 'Failed to upload photo');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -569,25 +585,24 @@ export default function PhotographerDashboard() {
               />
             </div>
 
-            {/* Portfolio URL builder */}
+            {/* Portfolio Upload */}
             <div className="space-y-4 border-t border-[#1A1A1A]/5 pt-4">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-brand-charcoal/40">Portfolio Image Gallery Links</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-brand-charcoal/40">Portfolio Image Gallery Upload</label>
               
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <input
-                  type="text"
-                  value={newPortfolioUrl}
-                  onChange={(e) => setNewPortfolioUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="flex-1 bg-brand-offwhite border border-[#1A1A1A]/10 focus:outline-none rounded-xl px-3.5 py-2.5 text-sm font-semibold"
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  disabled={uploading}
+                  onChange={handleFileChange}
+                  className="w-full bg-brand-offwhite border border-[#1A1A1A]/10 focus:outline-none rounded-xl px-3.5 py-2.5 text-sm font-semibold file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-charcoal file:text-white hover:file:bg-[#E8A020] file:cursor-pointer disabled:opacity-50"
                 />
-                <button
-                  type="button"
-                  onClick={handleAddPortfolioImage}
-                  className="bg-[#E8A020] hover:bg-[#d08f1b] text-white px-4 rounded-xl font-bold flex items-center justify-center"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
+                {uploading && (
+                  <p className="text-xs text-[#E8A020] animate-pulse">Uploading photo... Please wait.</p>
+                )}
+                {uploadError && (
+                  <p className="text-xs text-red-500 font-bold">{uploadError}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

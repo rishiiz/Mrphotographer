@@ -126,4 +126,25 @@ export const api = {
       method: 'DELETE',
     });
   },
+
+  uploadPhoto: async (file) => {
+    const token = localStorage.getItem('mrphotographer_token');
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const response = await fetch(`${API_BASE_URL}/photographers/upload`, {
+      method: 'POST',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  },
 };

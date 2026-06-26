@@ -1,6 +1,8 @@
 import express from 'express';
+import multer from 'multer';
 import { allQuery, getQuery, runQuery, parseJsonField } from '../database.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { uploadFileToR2 } from '../services/r2.js';
 
 const router = express.Router();
 
@@ -202,6 +204,42 @@ router.put('/profile', authenticateToken, requireRole('photographer'), async (re
   } catch (error) {
     next(error);
   }
+});
+
+// Setup multer with memory storage and constraints
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image/jpeg and image/png are allowed!'), false);
+    }
+  },
+});
+
+const uploadMiddleware = upload.single('photo');
+
+router.post('/upload', authenticateToken, requireRole('photographer'), (req, res, next) => {
+  uploadMiddleware(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const uniqueFileName = Date.now() + req.file.originalname;
+
+    uploadFileToR2(req.file.buffer, uniqueFileName, req.file.mimetype)
+      .then(url => {
+        res.json({ url });
+      })
+      .catch(next);
+  });
 });
 
 export default router;
