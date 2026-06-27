@@ -10,25 +10,6 @@
   }
 }
 
-/* Custom Leaflet overrides to match brand colors */
-.leaflet-container {
-  font-family: inherit;
-  border-radius: 0.5rem;
-  border: 1px solid rgba(26, 26, 26, 0.1);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-}
-
-.leaflet-bar a {
-  background-color: #FAFAF8 !important;
-  color: #1A1A1A !important;
-  border-bottom: 1px solid rgba(26, 26, 26, 0.1) !important;
-}
-
-.leaflet-bar a:hover {
-  background-color: #E8A020 !important;
-  color: #FAFAF8 !important;
-}
-
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
