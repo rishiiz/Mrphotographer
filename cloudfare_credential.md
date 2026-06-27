@@ -6,9 +6,9 @@ secret key = slkohl1vGacyO1k6ujCDY_QVNlk
 
 
 Railway credentials 
-Mysql host = ${{RAILWAY_PRIVATE_DOMAIN}}
+Mysql host = mysql.railway.internal
 mysql port = 3306
 mysql user = root
-mysql password = ${{MYSQL_ROOT_PASSWORD}}
+mysql password = MXMgxTqqDxWmtwoXjiZtICfLklzNNFIC
 mysql database =  
 railway
