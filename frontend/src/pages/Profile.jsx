@@ -2,8 +2,63 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { PageSkeleton } from '../components/Skeleton';
-import { MapPin, Star, Sparkles, ShieldCheck, Heart, Calendar as CalendarIcon, Clock, ChevronRight, Tag, Phone } from 'lucide-react';
+import { MapPin, Star, Sparkles, ShieldCheck, Heart, Calendar as CalendarIcon, Clock, ChevronRight, Tag, Phone, Video } from 'lucide-react';
 import { formatINR, getProfileImage, formatIndianPhone } from '../utils/currency';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const BACKEND_URL = API_BASE_URL.replace('/api', '');
+
+const renderVideoPlayer = (url) => {
+  if (!url) return null;
+  
+  const videoSrc = url.startsWith('/uploads') ? `${BACKEND_URL}${url}` : url;
+  
+  // Check if it's a youtube link
+  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const ytMatch = url.match(ytRegex);
+  
+  if (ytMatch) {
+    const videoId = ytMatch[1];
+    return (
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}`}
+        title="YouTube video player"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        className="w-full h-full"
+      ></iframe>
+    );
+  }
+  
+  // Check if it's vimeo
+  const vimeoRegex = /vimeo\.com\/(?:video\/)?([0-9]+)/;
+  const vimeoMatch = url.match(vimeoRegex);
+  
+  if (vimeoMatch) {
+    const videoId = vimeoMatch[1];
+    return (
+      <iframe
+        src={`https://player.vimeo.com/video/${videoId}`}
+        title="Vimeo video player"
+        frameBorder="0"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+        className="w-full h-full"
+      ></iframe>
+    );
+  }
+  
+  // Default to native HTML5 video player
+  return (
+    <video
+      src={videoSrc}
+      controls
+      className="w-full h-full"
+      preload="metadata"
+    />
+  );
+};
 
 export default function Profile() {
   const { id } = useParams();
@@ -183,24 +238,44 @@ export default function Profile() {
 
           {/* Portfolio Tab */}
           {activeTab === 'portfolio' && (
-            <div className="space-y-6">
-              {photographer.portfolio.length === 0 ? (
-                <div className="text-center py-16 bg-white border border-[#1A1A1A]/5 rounded-2xl text-brand-charcoal/40">
-                  No portfolio images uploaded yet.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {photographer.portfolio.map((img, index) => (
-                    <div key={index} className="overflow-hidden rounded-2xl bg-brand-charcoal/5 border border-[#1A1A1A]/5 relative group aspect-video">
-                      <img
-                        src={img}
-                        alt={`Portfolio ${index}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    </div>
-                  ))}
+            <div className="space-y-6 animate-fade-in">
+              {/* Featured Video Reel if exists */}
+              {photographer.portfolio_video && (
+                <div className="space-y-3 bg-white p-6 rounded-3xl border border-[#1A1A1A]/5 shadow-sm">
+                  <h3 className="text-lg font-bold text-brand-charcoal flex items-center space-x-2">
+                    <Video className="w-5 h-5 text-[#E8A020]" />
+                    <span>Featured Video Reel</span>
+                  </h3>
+                  <div className="relative aspect-video bg-black rounded-2xl overflow-hidden shadow-sm border border-[#1A1A1A]/5">
+                    {renderVideoPlayer(photographer.portfolio_video)}
+                  </div>
                 </div>
               )}
+
+              {/* Portfolio Images Gallery */}
+              <div className="bg-white p-6 rounded-3xl border border-[#1A1A1A]/5 shadow-sm space-y-4">
+                <h3 className="text-lg font-bold text-brand-charcoal">Image Gallery</h3>
+                {photographer.portfolio.length === 0 ? (
+                  <div className="text-center py-16 text-brand-charcoal/40 text-sm">
+                    No portfolio images uploaded yet.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {photographer.portfolio.map((img, index) => {
+                      const imgUrl = img.startsWith('/uploads') ? `${BACKEND_URL}${img}` : img;
+                      return (
+                        <div key={index} className="overflow-hidden rounded-2xl bg-brand-charcoal/5 border border-[#1A1A1A]/5 relative group aspect-video">
+                          <img
+                            src={imgUrl}
+                            alt={`Portfolio ${index}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

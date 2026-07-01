@@ -100,6 +100,19 @@ export const initDb = async () => {
   `);
 
   await runQuery(`
+    CREATE TABLE IF NOT EXISTS photographer_portfolio (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      photographer_id INT NOT NULL UNIQUE,
+      profile_pic TEXT,
+      portfolio_images JSON,
+      portfolio_video TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (photographer_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  await runQuery(`
     CREATE TABLE IF NOT EXISTS packages (
       id INT AUTO_INCREMENT PRIMARY KEY,
       photographer_id INT,
