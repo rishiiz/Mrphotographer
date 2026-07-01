@@ -72,6 +72,30 @@ export const api = {
     });
   },
 
+  getPortfolio: async () => {
+    return apiFetch('/photographers/portfolio');
+  },
+
+  uploadPortfolio: async (formData) => {
+    const token = localStorage.getItem('mrphotographer_token');
+    const response = await fetch(
+      `${API_BASE_URL}/photographers/portfolio/upload`,
+      {
+        method: 'POST',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+          // Do NOT set Content-Type — browser sets the multipart boundary automatically
+        },
+        body: formData,
+      }
+    );
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Upload failed: ${response.status}`);
+    }
+    return response.json();
+  },
+
   // Bookings & Availability
   getBookings: async () => {
     return apiFetch('/bookings');

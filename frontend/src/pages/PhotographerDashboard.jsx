@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { PageSkeleton } from '../components/Skeleton';
-import { LayoutDashboard, Calendar, UserCheck, IndianRupee, Star, CheckCircle, XCircle, AlertCircle, Plus, Trash2, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Calendar, UserCheck, IndianRupee, Star, CheckCircle, XCircle, AlertCircle, Plus, Trash2, ShieldAlert, UploadCloud, Camera, Video, PlayCircle } from 'lucide-react';
 import { formatINR } from '../utils/currency';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const BACKEND_URL = API_BASE_URL.replace('/api', '');
 
 const DEFAULT_SLOTS = ['09:00 - 11:00', '11:00 - 13:00', '14:00 - 16:00', '16:00 - 18:00'];
 
@@ -31,6 +34,15 @@ export default function PhotographerDashboard() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
 
+  // Portfolio states — preview URLs (for display) + actual File objects (for upload)
+  const [profilePic, setProfilePic] = useState(null);       // preview URL string
+  const [profilePicFile, setProfilePicFile] = useState(null); // File object
+  const [portfolioGrid, setPortfolioGrid] = useState([null, null, null]);       // preview URL strings
+  const [portfolioGridFiles, setPortfolioGridFiles] = useState([null, null, null]); // File objects
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoFile, setVideoFile] = useState(null);
+  const [isVideoUploaded, setIsVideoUploaded] = useState(false);
+
   useEffect(() => {
     async function loadDashboardData() {
       try {
@@ -48,6 +60,30 @@ export default function PhotographerDashboard() {
           setGear(profile.gear || '');
           setSpecialties(profile.specialties || '');
           setPortfolioList(profile.portfolio || []);
+        }
+
+        // Load saved portfolio (profile pic, images, video) from backend
+        try {
+          const portfolioData = await api.getPortfolio();
+          if (portfolioData.profile_pic) {
+            setProfilePic(`${BACKEND_URL}${portfolioData.profile_pic}`);
+          }
+          if (portfolioData.portfolio_images && portfolioData.portfolio_images.length > 0) {
+            const grid = [null, null, null];
+            portfolioData.portfolio_images.forEach((img, i) => {
+              if (i < 3 && img) grid[i] = `${BACKEND_URL}${img}`;
+            });
+            setPortfolioGrid(grid);
+          }
+          if (portfolioData.portfolio_video) {
+            if (portfolioData.portfolio_video.startsWith('/uploads')) {
+              setIsVideoUploaded(true);
+            } else {
+              setVideoUrl(portfolioData.portfolio_video);
+            }
+          }
+        } catch (portfolioErr) {
+          console.log('No portfolio data yet');
         }
       } catch (err) {
         console.error('Failed to load dashboard data', err);
@@ -120,6 +156,7 @@ export default function PhotographerDashboard() {
     e.preventDefault();
     setProfileMsg('');
     try {
+      // 1. Save text fields
       await api.updateProfile({
         name,
         bio,
@@ -129,6 +166,59 @@ export default function PhotographerDashboard() {
         gear,
         portfolio: portfolioList
       });
+
+      // 2. Upload portfolio files (profile pic, portfolio images, video)
+      const formData = new FormData();
+      formData.append('portfolio_grid_state', JSON.stringify(portfolioGrid));
+
+      if (profilePicFile) {
+        formData.append('profile_pic', profilePicFile);
+      }
+
+      portfolioGridFiles.forEach((file) => {
+        if (file) {
+          formData.append('portfolio_images', file);
+        }
+      });
+
+      if (videoFile) {
+        formData.append('portfolio_video', videoFile);
+      }
+
+      formData.append('video_url', videoUrl || '');
+
+      const result = await api.uploadPortfolio(formData);
+      
+      // Update local preview URLs from the server response
+      if (result.profile_pic) {
+        setProfilePic(`${BACKEND_URL}${result.profile_pic}`);
+        setProfilePicFile(null);
+      }
+      
+      const grid = [null, null, null];
+      if (result.portfolio_images?.length > 0) {
+        result.portfolio_images.forEach((img, i) => {
+          if (i < 3 && img) grid[i] = `${BACKEND_URL}${img}`;
+        });
+      }
+      setPortfolioGrid(grid);
+      setPortfolioGridFiles([null, null, null]);
+
+      if (result.portfolio_video) {
+        if (result.portfolio_video.startsWith('/uploads')) {
+          setIsVideoUploaded(true);
+          setVideoUrl('');
+        } else {
+          setIsVideoUploaded(false);
+          setVideoUrl(result.portfolio_video);
+        }
+        setVideoFile(null);
+      } else {
+        setIsVideoUploaded(false);
+        setVideoUrl('');
+        setVideoFile(null);
+      }
+
       setProfileMsg('Profile updated successfully!');
       await reloadProfile();
     } catch (err) {
@@ -506,6 +596,42 @@ export default function PhotographerDashboard() {
           <form onSubmit={handleSaveProfile} className="space-y-6 max-w-3xl">
             <h2 className="text-lg font-bold border-b border-[#1A1A1A]/10 pb-2">Edit Photographer Profile Settings</h2>
 
+            {/* Profile Picture */}
+            <div className="flex items-center space-x-6 pb-2">
+              <div className="relative group w-24 h-24 rounded-full overflow-hidden border-2 border-brand-charcoal/10 bg-brand-offwhite flex-shrink-0">
+                {profilePic ? (
+                  <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-brand-charcoal/30" />
+                  </div>
+                )}
+                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <UploadCloud className="w-6 h-6 text-white" />
+                  <input type="file" className="hidden" accept="image/jpeg,image/png" onChange={(e) => {
+                    if (e.target.files[0]) {
+                      setProfilePic(URL.createObjectURL(e.target.files[0]));
+                      setProfilePicFile(e.target.files[0]);
+                    }
+                  }} />
+                </label>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-brand-charcoal">Profile Photo</h3>
+                <p className="text-xs text-brand-charcoal/60">Recommended: 400x400px, square aspect ratio.</p>
+                <label className="inline-flex items-center justify-center space-x-1.5 px-4 py-2 border border-[#1A1A1A]/10 rounded-xl text-xs font-bold hover:bg-[#1A1A1A]/5 transition-colors cursor-pointer mt-2">
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>Upload Image</span>
+                  <input type="file" className="hidden" accept="image/jpeg,image/png" onChange={(e) => {
+                    if (e.target.files[0]) {
+                      setProfilePic(URL.createObjectURL(e.target.files[0]));
+                      setProfilePicFile(e.target.files[0]);
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
+
             {profileMsg && (
               <div className={`p-4 rounded-xl text-sm font-bold flex items-center space-x-2 ${
                 profileMsg.startsWith('Error') ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'
@@ -618,6 +744,117 @@ export default function PhotographerDashboard() {
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Portfolio Images Grid */}
+            <div className="space-y-4 border-t border-[#1A1A1A]/5 pt-6">
+              <div>
+                <h3 className="text-sm font-bold text-brand-charcoal">Portfolio Images (Upload up to 3)</h3>
+                <p className="text-[10px] uppercase tracking-wider text-brand-charcoal/40 mt-1">Showcase your best work directly on your profile.</p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[0, 1, 2].map((index) => {
+                  const img = portfolioGrid[index];
+                  return (
+                    <div key={index} className="relative aspect-square rounded-2xl border-2 border-dashed border-[#1A1A1A]/10 bg-brand-offwhite hover:bg-[#1A1A1A]/5 transition-colors overflow-hidden group flex items-center justify-center">
+                      {img ? (
+                        <>
+                          <img src={img} alt={`Portfolio ${index + 1}`} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newGrid = [...portfolioGrid];
+                                newGrid[index] = null;
+                                setPortfolioGrid(newGrid);
+                              }}
+                              className="bg-red-600 text-white rounded-full p-2 shadow-lg hover:bg-red-700 transform hover:scale-105 transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-brand-charcoal/40 hover:text-[#E8A020] transition-colors p-4 text-center">
+                          <UploadCloud className="w-6 h-6 mb-2" />
+                          <span className="text-xs font-bold">Upload Image</span>
+                          <span className="text-[10px] mt-1 opacity-70">JPG, PNG (Max 5MB)</span>
+                          <input type="file" className="hidden" accept="image/jpeg,image/png" onChange={(e) => {
+                            if (e.target.files[0]) {
+                              const newGrid = [...portfolioGrid];
+                              newGrid[index] = URL.createObjectURL(e.target.files[0]);
+                              setPortfolioGrid(newGrid);
+                              const newFiles = [...portfolioGridFiles];
+                              newFiles[index] = e.target.files[0];
+                              setPortfolioGridFiles(newFiles);
+                            }
+                          }} />
+                        </label>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Portfolio Video */}
+            <div className="space-y-4 border-t border-[#1A1A1A]/5 pt-6 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-brand-charcoal">Featured Portfolio Video (Optional)</h3>
+                  <p className="text-[10px] uppercase tracking-wider text-brand-charcoal/40 mt-1">A short reel or behind-the-scenes video.</p>
+                </div>
+              </div>
+
+              <div className="bg-brand-offwhite border border-[#1A1A1A]/10 rounded-2xl p-4 md:p-6 space-y-4">
+                {isVideoUploaded ? (
+                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden group">
+                    <img src="https://images.unsplash.com/photo-1600188769045-bc6ed150d180?auto=format&fit=crop&q=80&w=800" alt="Video Thumbnail" className="w-full h-full object-cover opacity-60" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <PlayCircle className="w-12 h-12 text-white/80 group-hover:text-white transition-colors cursor-pointer" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsVideoUploaded(false)}
+                      className="absolute top-3 right-3 bg-red-600 text-white rounded-lg p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#1A1A1A]/10 rounded-xl py-10 px-4 text-center cursor-pointer hover:bg-[#1A1A1A]/5 hover:border-[#E8A020]/50 transition-all group">
+                    <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-[#1A1A1A]/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Video className="w-5 h-5 text-brand-charcoal/40 group-hover:text-[#E8A020]" />
+                    </div>
+                    <span className="text-sm font-bold text-brand-charcoal">Drag and drop a video, or browse</span>
+                    <span className="text-xs text-brand-charcoal/50 mt-1">MP4, MOV up to 15MB</span>
+                    <input type="file" className="hidden" accept="video/mp4,video/quicktime" onChange={(e) => {
+                      if (e.target.files[0]) {
+                        setVideoFile(e.target.files[0]);
+                        setIsVideoUploaded(true);
+                      }
+                    }} />
+                  </label>
+                )}
+                
+                <div className="flex items-center space-x-4">
+                  <div className="h-px bg-[#1A1A1A]/10 flex-1"></div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-charcoal/30">OR</span>
+                  <div className="h-px bg-[#1A1A1A]/10 flex-1"></div>
+                </div>
+
+                <div className="relative flex items-center bg-white border border-[#1A1A1A]/10 focus-within:border-[#E8A020] rounded-xl px-3.5 py-2.5 transition-colors">
+                  <Video className="w-4 h-4 text-brand-charcoal/30 mr-2 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="Video URL (YouTube/Vimeo or direct link)"
+                    className="w-full bg-transparent focus:outline-none text-sm font-semibold"
+                  />
+                </div>
               </div>
             </div>
 

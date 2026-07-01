@@ -1,8 +1,47 @@
 import express from 'express';
 import multer from 'multer';
+<<<<<<< HEAD
+=======
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+>>>>>>> c43c782 (Your commit message)
 import { allQuery, getQuery, runQuery, parseJsonField } from '../database.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { uploadFileToR2 } from '../services/r2.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|mp4|quicktime|mov/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname || mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images (JPG, PNG) and videos (MP4, MOV) are allowed'));
+    }
+  }
+});
 
 const router = express.Router();
 
@@ -21,7 +60,14 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 function normalizeProfile(row) {
   if (!row) return row;
-  row.portfolio = parseJsonField(row.portfolio, []);
+  if (row.portfolio_images !== undefined && row.portfolio_images !== null) {
+    row.portfolio = parseJsonField(row.portfolio_images, []);
+  } else {
+    row.portfolio = parseJsonField(row.portfolio, []);
+  }
+  if (row.profile_pic) {
+    row.profile_photo = row.profile_pic;
+  }
   row.is_approved = !!row.is_approved;
   row.price_per_hour = parseFloat(row.price_per_hour);
   row.rating = parseFloat(row.rating);
@@ -34,9 +80,11 @@ router.get('/', async (req, res, next) => {
   try {
     let query = `
       SELECT p.*, u.email,
+        port.portfolio_images, port.portfolio_video, port.profile_pic,
         (SELECT COUNT(*) FROM reviews r WHERE r.photographer_id = p.user_id) AS review_count
       FROM photographer_profiles p
       JOIN users u ON p.user_id = u.id
+      LEFT JOIN photographer_portfolio port ON p.user_id = port.photographer_id
       WHERE p.is_approved = true
     `;
     const params = [];
@@ -113,7 +161,11 @@ router.get('/:id', async (req, res, next) => {
 
   try {
     const profile = await getQuery(
-      'SELECT p.*, u.email FROM photographer_profiles p JOIN users u ON p.user_id = u.id WHERE p.user_id = ?',
+      `SELECT p.*, u.email, port.portfolio_images, port.portfolio_video, port.profile_pic
+       FROM photographer_profiles p
+       JOIN users u ON p.user_id = u.id
+       LEFT JOIN photographer_portfolio port ON p.user_id = port.photographer_id
+       WHERE p.user_id = ?`,
       [id]
     );
 
@@ -206,6 +258,7 @@ router.put('/profile', authenticateToken, requireRole('photographer'), async (re
   }
 });
 
+<<<<<<< HEAD
 // Setup multer with memory storage and constraints
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -241,5 +294,123 @@ router.post('/upload', authenticateToken, requireRole('photographer'), (req, res
       .catch(next);
   });
 });
+=======
+// ─── PORTFOLIO ENDPOINTS ───────────────────────────────────────────
+
+// GET portfolio data for the logged-in photographer
+router.get('/portfolio', authenticateToken, requireRole('photographer'), async (req, res, next) => {
+  try {
+    const row = await getQuery(
+      'SELECT * FROM photographer_portfolio WHERE photographer_id = ?',
+      [req.user.id]
+    );
+    if (!row) {
+      return res.json({ profile_pic: null, portfolio_images: [], portfolio_video: null });
+    }
+    row.portfolio_images = parseJsonField(row.portfolio_images, []);
+    res.json(row);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST upload portfolio files (profile pic, portfolio images, video)
+router.post(
+  '/portfolio/upload',
+  authenticateToken,
+  requireRole('photographer'),
+  upload.fields([
+    { name: 'profile_pic', maxCount: 1 },
+    { name: 'portfolio_images', maxCount: 3 },
+    { name: 'portfolio_video', maxCount: 1 }
+  ]),
+  async (req, res, next) => {
+    const photographerId = req.user.id;
+    try {
+      // Fetch existing row so we can merge (keep old values for fields not re-uploaded)
+      const existing = await getQuery(
+        'SELECT * FROM photographer_portfolio WHERE photographer_id = ?',
+        [photographerId]
+      );
+
+      // Build the values from uploads + existing data
+      let profilePicUrl = existing?.profile_pic || null;
+      let portfolioImages = parseJsonField(existing?.portfolio_images, []);
+      let portfolioVideo = existing?.portfolio_video || null;
+
+      if (req.files?.profile_pic?.[0]) {
+        profilePicUrl = `/uploads/${req.files.profile_pic[0].filename}`;
+      }
+
+      // Handle portfolio grid state if passed to keep/delete correct images in correct slots
+      if (req.body.portfolio_grid_state) {
+        try {
+          const gridState = JSON.parse(req.body.portfolio_grid_state);
+          let fileIndex = 0;
+          const newPortfolioImages = [];
+
+          for (let i = 0; i < gridState.length; i++) {
+            const val = gridState[i];
+            if (val) {
+              if (val.startsWith('/uploads/')) {
+                newPortfolioImages.push(val);
+              } else if (val.includes('/uploads/')) {
+                const idx = val.indexOf('/uploads/');
+                newPortfolioImages.push(val.substring(idx));
+              } else if (req.files?.portfolio_images?.[fileIndex]) {
+                newPortfolioImages.push(`/uploads/${req.files.portfolio_images[fileIndex].filename}`);
+                fileIndex++;
+              }
+            }
+          }
+          portfolioImages = newPortfolioImages;
+        } catch (e) {
+          console.error('Failed to parse portfolio_grid_state', e);
+          if (req.files?.portfolio_images?.length) {
+            portfolioImages = req.files.portfolio_images.map(f => `/uploads/${f.filename}`);
+          }
+        }
+      } else if (req.files?.portfolio_images?.length) {
+        portfolioImages = req.files.portfolio_images.map(f => `/uploads/${f.filename}`);
+      }
+
+      if (req.files?.portfolio_video?.[0]) {
+        portfolioVideo = `/uploads/${req.files.portfolio_video[0].filename}`;
+      } else if (req.body.video_url !== undefined) {
+        portfolioVideo = req.body.video_url || null;
+      }
+
+      // UPSERT
+      if (existing) {
+        await runQuery(`
+          UPDATE photographer_portfolio
+          SET profile_pic = ?, portfolio_images = ?, portfolio_video = ?
+          WHERE photographer_id = ?
+        `, [profilePicUrl, JSON.stringify(portfolioImages), portfolioVideo, photographerId]);
+      } else {
+        await runQuery(`
+          INSERT INTO photographer_portfolio (photographer_id, profile_pic, portfolio_images, portfolio_video)
+          VALUES (?, ?, ?, ?)
+        `, [photographerId, profilePicUrl, JSON.stringify(portfolioImages), portfolioVideo]);
+      }
+
+      // Also update the profile_photo and portfolio columns in photographer_profiles so search/details pick it up
+      await runQuery(
+        'UPDATE photographer_profiles SET profile_photo = ?, portfolio = ? WHERE user_id = ?',
+        [profilePicUrl, JSON.stringify(portfolioImages), photographerId]
+      );
+
+      res.json({
+        message: 'Portfolio saved successfully',
+        profile_pic: profilePicUrl,
+        portfolio_images: portfolioImages,
+        portfolio_video: portfolioVideo
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+>>>>>>> c43c782 (Your commit message)
 
 export default router;

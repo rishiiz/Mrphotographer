@@ -38,30 +38,20 @@ npm install
 npm run dev
 ```
 
-On first start, tables are created and **10 Pune photographers** are seeded automatically.
+On first start, tables are created automatically.
 
-## Demo accounts
+## Creating an Admin Account
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@mrphotographer.com | password123 |
-| Client | client@example.com | password123 |
-| Photographer | rishi.photography@mrphotographer.in | password123 |
+Since there are no auto-seeded accounts, you must create an admin account manually:
 
-All 10 seeded photographers use `password123`.
+1. Register a new account on the frontend (e.g., `admin@yourdomain.com`).
+2. Open your MySQL client and update the user's role to `admin`:
 
-## Seeded Pune studios
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'admin@yourdomain.com';
+```
 
-- Rishi Photography
-- AJ PHOTOGRAPHY
-- NIK'S PHOTOGRAPHY & STUDIO
-- Akshay Kalbhor Films and Photography
-- Rushi Nimbalkar Photography & Films
-- MORYA PHOTOGRAPHY STUDIO & GRAPHICS
-- Arohi Digital Photo Studio
-- Shrinath Photography
-- Studio21 photography and films
-- Belly To Baby Photography
+3. Log in again with those credentials to access the admin dashboard.
 
 ## Reset seed data
 

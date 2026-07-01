@@ -56,7 +56,7 @@ The `docker-compose.yml` defines the following three services:
    - Builds from the `backend/Dockerfile`.
    - Connects to the `db` service on its internal port `3306`.
    - Runs the Express API on port `5000`.
-   - On the first run, the database tables and initial mock data (like Pune photographers) are automatically seeded.
+   - On the first run, the database tables are automatically created.
    - Includes a restart policy (`restart: unless-stopped`) to ensure it reconnects successfully if the database takes a few extra seconds to initialize.
 
 3. **`frontend` (React + Nginx)**
